@@ -472,66 +472,25 @@ createApp({
       this.subscribing = true;
 
       try {
-        // ── 1. Save to Supabase database ──
-        await fetch(`${SUPABASE_URL}/rest/v1/subscribers`, {
+        // Step 1: Save email to Supabase
+        const dbRes = await fetch(SUPABASE_URL + '/rest/v1/subscribers', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
             'Prefer': 'return=minimal'
           },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email: email })
         });
 
-        // ── 2. Send Thank You email via Resend ──
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${RESEND_KEY}`
-          },
-          body: JSON.stringify({
-            from: 'LUXE Store <onboarding@resend.dev>',
-            to: [email],
-            subject: 'Welcome to LUXE Inner Circle! ✨',
-            html: `
-              <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;background:#faf7f2;">
-                <div style="background:#0d0d0d;padding:32px 40px;text-align:center;">
-                  <h1 style="font-size:2rem;color:#f5f0e8;letter-spacing:0.2em;margin:0;font-weight:300;">
-                    LU<span style="color:#c9a84c">X</span>E
-                  </h1>
-                </div>
-                <div style="padding:48px 40px;">
-                  <p style="font-size:0.7rem;letter-spacing:0.25em;text-transform:uppercase;color:#c9a84c;margin-bottom:16px;">Welcome to the Inner Circle</p>
-                  <h2 style="font-size:1.6rem;font-weight:300;color:#0d0d0d;margin:0 0 16px;line-height:1.3;">Thank you for joining LUXE.</h2>
-                  <div style="width:40px;height:1px;background:#c9a84c;margin-bottom:24px;"></div>
-                  <p style="color:#6b6560;line-height:1.8;margin-bottom:24px;">As a member of the LUXE Inner Circle, you'll be the first to know about:</p>
-                  <div style="background:#f5f0e8;border-left:3px solid #c9a84c;padding:12px 16px;margin-bottom:8px;">
-                    <span style="color:#c9a84c;margin-right:8px;">✦</span><span style="color:#0d0d0d;">New collections dropping every Friday</span>
-                  </div>
-                  <div style="background:#f5f0e8;border-left:3px solid #c9a84c;padding:12px 16px;margin-bottom:8px;">
-                    <span style="color:#c9a84c;margin-right:8px;">✦</span><span style="color:#0d0d0d;">Exclusive member-only offers & early access</span>
-                  </div>
-                  <div style="background:#f5f0e8;border-left:3px solid #c9a84c;padding:12px 16px;margin-bottom:32px;">
-                    <span style="color:#c9a84c;margin-right:8px;">✦</span><span style="color:#0d0d0d;">Flash sales and seasonal promotions</span>
-                  </div>
-                  <div style="text-align:center;">
-                    <a href="https://luxe-ecommerce-store-irp5-git-main-aishasardars-projects.vercel.app/"
-                       style="background:#0d0d0d;color:#f5f0e8;padding:14px 36px;text-decoration:none;font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;display:inline-block;">
-                      Shop New Arrivals
-                    </a>
-                  </div>
-                </div>
-                <div style="background:#0d0d0d;padding:24px 40px;text-align:center;">
-                  <p style="color:rgba(245,240,232,0.4);font-size:0.7rem;margin:0;">© 2025 LUXE. All rights reserved.</p>
-                </div>
-              </div>
-            `
-          })
-        });
+        // 201 = created, 409 = duplicate email (both are fine)
+        if (!dbRes.ok && dbRes.status !== 409) {
+          throw new Error('Could not save email: ' + dbRes.status);
+        }
 
-        this.showToast('🎉 Welcome! Check your email!');
+        // Step 2: Show success message
+        this.showToast('Welcome to the Inner Circle!');
         this.email = '';
 
       } catch (error) {
