@@ -3,119 +3,22 @@ name: CI/CD — Deploy to Vercel
 on:
   push:
     branches:
-      - main        # Auto-deploy to Production
-      - develop     # Auto-deploy to Preview
-  pull_request:
-    branches:
-      - main        # Run checks on PRs to main
+      - main
 
 jobs:
-  # ─────────────────────────────────────────
-  # JOB 1: Lint & Build Check
-  # ─────────────────────────────────────────
-  build:
-    name: Build & Lint Check
+  deploy:
+    name: Deploy to Vercel
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Linter
-        run: npm run lint --if-present
-
-      - name: Build Project
-        run: npm run build
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: dist/
-          retention-days: 1
-
-  # ─────────────────────────────────────────
-  # JOB 2: Deploy Preview (develop branch)
-  # ─────────────────────────────────────────
-  deploy-preview:
-    name: Deploy to Preview
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    environment:
-      name: Preview
-      url: ${{ steps.deploy.outputs.preview-url }}
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
 
       - name: Install Vercel CLI
         run: npm install -g vercel
 
-      - name: Pull Vercel Environment (Preview)
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build for Preview
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel Preview
-        id: deploy
-        run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "preview-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "✅ Preview deployed: $DEPLOY_URL"
-
-  # ─────────────────────────────────────────
-  # JOB 3: Deploy Production (main branch)
-  # ─────────────────────────────────────────
-  deploy-production:
-    name: Deploy to Production
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: Production
-      url: https://luxe-store.vercel.app
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Pull Vercel Environment (Production)
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build for Production
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel Production
-        run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "🚀 Production deployed: $DEPLOY_URL"
-
-      - name: Notify on Success
-        run: echo "✅ Production deployment successful!"
+      - name: Deploy to Vercel
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
